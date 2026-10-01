@@ -1,0 +1,12 @@
+[Unit]
+Description=Check PromptPerp deployment and component health
+
+[Timer]
+OnBootSec=2m
+OnUnitActiveSec=1m
+AccuracySec=10s
+Persistent=true
+Unit=promptperp-deployment-monitor.service
+
+[Install]
+WantedBy=timers.target

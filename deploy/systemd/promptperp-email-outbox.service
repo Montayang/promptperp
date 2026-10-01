@@ -1,0 +1,22 @@
+[Unit]
+Description=Deliver one approved PromptPerp investor statement
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=promptperp-mail
+Group=promptperp-mail
+WorkingDirectory=/opt/promptperp
+EnvironmentFile=/etc/promptperp/email-outbox-approval.env
+ExecStart=/opt/promptperp/.venv/bin/python -m promptperp.operations.email_outbox_worker --database /var/lib/promptperp/accounting/accounting.sqlite3 --env-file /etc/promptperp/outbox-mail.env --lease-path /var/lib/promptperp/mail/outbox.lease --next --commit-sha ${COMMIT_SHA} --approved-at ${APPROVED_AT} --approval-expires-at ${APPROVAL_EXPIRES_AT} --execute
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/etc/promptperp/outbox-mail.env /etc/promptperp/email-outbox-approval.env
+ReadWritePaths=/var/lib/promptperp/accounting /var/lib/promptperp/mail
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+RestrictSUIDSGID=true

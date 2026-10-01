@@ -1,0 +1,11 @@
+[Unit]
+Description=Create daily verified PromptPerp investor-ledger backup
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=10m
+Unit=promptperp-accounting-backup.service
+
+[Install]
+WantedBy=timers.target

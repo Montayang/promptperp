@@ -1,0 +1,20 @@
+[Unit]
+Description=Create and verify PromptPerp investor-ledger backup
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=promptperp-accounting
+Group=promptperp-accounting
+WorkingDirectory=/opt/promptperp
+ExecStart=/opt/promptperp/.venv/bin/python -m promptperp.operations.accounting_service --database /var/lib/promptperp/accounting/accounting.sqlite3 backup --destination /var/backups/promptperp/accounting-latest.sqlite3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/var/lib/promptperp/accounting
+ReadWritePaths=/var/backups/promptperp
+RestrictAddressFamilies=AF_UNIX
+LockPersonality=true
+RestrictSUIDSGID=true

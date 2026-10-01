@@ -1,0 +1,19 @@
+[portfolio]
+allocatable_equity = "1000"
+reserve_fraction = "0.10"
+allowed_symbols = ["BTCUSDT", "ETHUSDT", "FFFUSDT"]
+max_total_positions = 2
+max_total_margin = "700"
+balance_buffer = "100"
+max_signal_age_seconds = "30"
+max_account_age_seconds = "15"
+max_leverage = 5
+shared_symbol_policy = "EXCLUSIVE"
+
+[[allocation]]
+strategy_id = "threshold_momentum"
+fraction = "0.80"
+max_margin_per_trade = "100"
+max_leverage = 2
+max_loss_per_trade = "5"
+max_positions = 1

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "interface_version": 1,
+  "strategy_id": "threshold_momentum",
+  "name": "Threshold momentum sample",
+  "description": "The declarative form of PromptPerp's only bundled offline sample strategy.",
+  "data": {"event_kind": "bar", "interval": "1m", "max_age_seconds": 60, "warmup": 1},
+  "symbols": ["BTCUSDT"],
+  "indicators": [{"id": "close_sma", "kind": "sma", "field": "close", "window": 2}],
+  "entry_rules": [{
+    "id": "close_above_sma",
+    "position_side": "LONG",
+    "reason": "close above two-event SMA",
+    "when": {"op": "gt", "args": [{"ref": "close"}, {"ref": "close_sma"}]}
+  }],
+  "exit_intent": {"take_profit_ratio": "0.02", "stop_loss_ratio": "0.01"},
+  "cooldown_events": 2,
+  "assumptions": ["events are final synthetic bars"],
+  "unresolved": [],
+  "assertions": ["a rising close can produce a long proposal"],
+  "scenarios": [
+    {"id": "normal_rise", "category": "normal", "events": [
+      {"sequence": 1, "observed_at": "2026-10-01T08:01:00+00:00", "symbol": "BTCUSDT", "values": {"close": "1"}},
+      {"sequence": 2, "observed_at": "2026-10-01T08:02:00+00:00", "symbol": "BTCUSDT", "values": {"close": "3"}}
+    ], "expect_signal": true, "expect_error": false},
+    {"id": "no_signal_fall", "category": "no_signal", "events": [
+      {"sequence": 1, "observed_at": "2026-10-01T08:01:00+00:00", "symbol": "BTCUSDT", "values": {"close": "3"}},
+      {"sequence": 2, "observed_at": "2026-10-01T08:02:00+00:00", "symbol": "BTCUSDT", "values": {"close": "1"}}
+    ], "expect_signal": false, "expect_error": false},
+    {"id": "equal_boundary", "category": "boundary", "events": [
+      {"sequence": 1, "observed_at": "2026-10-01T08:01:00+00:00", "symbol": "BTCUSDT", "values": {"close": "1"}},
+      {"sequence": 2, "observed_at": "2026-10-01T08:02:00+00:00", "symbol": "BTCUSDT", "values": {"close": "1"}}
+    ], "expect_signal": false, "expect_error": false},
+    {"id": "duplicate_data", "category": "data_fault", "events": [
+      {"sequence": 1, "observed_at": "2026-10-01T08:01:00+00:00", "symbol": "BTCUSDT", "values": {"close": "1"}},
+      {"sequence": 1, "observed_at": "2026-10-01T08:02:00+00:00", "symbol": "BTCUSDT", "values": {"close": "3"}}
+    ], "expect_signal": false, "expect_error": true},
+    {"id": "invalid_number", "category": "abnormal", "events": [
+      {"sequence": 1, "observed_at": "2026-10-01T08:01:00+00:00", "symbol": "BTCUSDT", "values": {"close": "NaN"}}
+    ], "expect_signal": false, "expect_error": true}
+  ]
+}

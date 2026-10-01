@@ -1,0 +1,39 @@
+[migration]
+migration_id = "example-opening-2030"
+pool_id = "example-shared-pool"
+strategy_id = "example-strategy"
+strategy_version = "example-version"
+occurred_at = "2030-01-31T07:00:00+00:00"
+exchange_equity = "2400.00000000"
+actor = "example-operator"
+reason = "example audited opening balance migration"
+
+[[investors]]
+investor_id = "example-owner"
+display_name = "Example Owner"
+email = "owner@example.invalid"
+opening_contribution = "1500.00000000"
+opening_units = "1500.000000000000000000"
+frequency = "monthly"
+timezone = "Asia/Singapore"
+local_send_time = "15:00"
+monthly_send_day = 24
+
+[[investors]]
+investor_id = "example-client"
+display_name = "Example Client"
+email = "client@example.invalid"
+opening_contribution = "600.00000000"
+opening_units = "600.000000000000000000"
+frequency = "monthly"
+timezone = "Asia/Singapore"
+local_send_time = "15:00"
+monthly_send_day = 24
+
+[[imported_snapshots]]
+record_id = "example-client-history-01"
+investor_id = "example-client"
+occurred_at = "2030-01-24T07:00:00+00:00"
+units = "600.000000000000000000"
+equity = "720.00000000"
+source_note = "example operator-attested historical report"

@@ -1,0 +1,43 @@
+name: Bug report
+description: Report a reproducible PromptPerp defect without sensitive data
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials, account data, order IDs, investor data or logs from a real deployment.
+  - type: input
+    id: revision
+    attributes:
+      label: PromptPerp revision
+      placeholder: Commit SHA or release tag
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Offline reproduction
+      description: Provide the smallest credential-free reproduction.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: This report contains no credentials or private trading/account information.
+          required: true
+        - label: I did not reproduce this issue against someone else's account or infrastructure.
+          required: true

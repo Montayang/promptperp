@@ -1,0 +1,11 @@
+[Unit]
+Description=Poll approved PromptPerp investor email queries
+
+[Timer]
+OnCalendar=*:0/5
+Persistent=false
+RandomizedDelaySec=20
+Unit=promptperp-email-query.service
+
+[Install]
+WantedBy=timers.target

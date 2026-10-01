@@ -1,0 +1,22 @@
+[Unit]
+Description=Dispatch PromptPerp alert spool for %i through host alert bridge
+ConditionFileIsExecutable=/usr/local/libexec/promptperp-alert-bridge
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=promptperp-alert
+Group=promptperp-alert
+ExecStart=/usr/local/libexec/promptperp-alert-bridge %i /var/lib/promptperp/alerts/outbox.ndjson
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/var/lib/promptperp/alerts/outbox.ndjson
+ReadWritePaths=/var/lib/promptperp/alerts
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+RestrictSUIDSGID=true
+CapabilityBoundingSet=

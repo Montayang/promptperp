@@ -1,0 +1,11 @@
+[Unit]
+Description=Deliver approved PromptPerp investor statements
+
+[Timer]
+OnCalendar=*:0/5
+Persistent=false
+RandomizedDelaySec=20
+Unit=promptperp-email-outbox.service
+
+[Install]
+WantedBy=timers.target

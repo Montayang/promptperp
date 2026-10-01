@@ -1,0 +1,17 @@
+# Example only. Never put real investors, email addresses or account data here.
+[accounting]
+base_asset = "USDT"
+timezone = "Asia/Singapore"
+reconciliation_max_age_minutes = 15
+reconciliation_tolerance = "0.00000001"
+
+[reporting]
+default_frequency = "daily"
+local_send_time = "09:00"
+weekly_boundary = "monday"
+monthly_boundary = "calendar-month"
+
+[security]
+inbound_email_hourly_limit = 5
+allow_email_mutations = false
+allow_trading_commands = false

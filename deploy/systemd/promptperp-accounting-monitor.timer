@@ -1,0 +1,11 @@
+[Unit]
+Description=Monitor PromptPerp investor-ledger health
+
+[Timer]
+OnCalendar=*:0/5
+Persistent=true
+RandomizedDelaySec=20
+Unit=promptperp-accounting-monitor.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,22 @@
+[Unit]
+Description=Process approved PromptPerp investor email queries
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=promptperp-query
+Group=promptperp-query
+WorkingDirectory=/opt/promptperp
+EnvironmentFile=/etc/promptperp/email-query-approval.env
+ExecStart=/opt/promptperp/.venv/bin/python -m promptperp.operations.email_query_provider --database /var/lib/promptperp/accounting/accounting.sqlite3 --inbox-state /var/lib/promptperp/query/inbox.sqlite3 --mail-env-file /etc/promptperp/query-mail.env --commit-sha ${COMMIT_SHA} --approved-at ${APPROVED_AT} --approval-expires-at ${APPROVAL_EXPIRES_AT} --max-messages 20 --execute
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/var/lib/promptperp/accounting /etc/promptperp/query-mail.env /etc/promptperp/email-query-approval.env
+ReadWritePaths=/var/lib/promptperp/query
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+RestrictSUIDSGID=true
