@@ -429,6 +429,7 @@ def test_denied_revoked_and_expired_approvals_cannot_be_consumed(tmp_path):
 
 def test_linux_sandbox_executes_only_trusted_interpreter_with_clean_namespace():
     runner = SandboxRunner(limits=SandboxLimits(timeout_seconds=5))
+    assert "--unshare-user" not in runner._base_bwrap()
     assert runner.probe().available
     spec = loaded_spec()
     events = tuple(

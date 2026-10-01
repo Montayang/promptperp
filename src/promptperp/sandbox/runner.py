@@ -224,8 +224,10 @@ class SandboxRunner:
         )
 
     def _base_bwrap(self) -> list[str]:
+        # The outer unshare process already owns the user and network
+        # namespaces. Creating a second user namespace inside bubblewrap is
+        # redundant and is rejected by some otherwise-capable Linux hosts.
         command = [
-            "--unshare-user",
             "--unshare-pid",
             "--unshare-ipc",
             "--unshare-uts",
