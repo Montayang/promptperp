@@ -11,6 +11,7 @@ links at the top.
 | Purpose | English | 简体中文 |
 |---|---|---|
 | Project overview | [README](../README.md) | [项目说明](../README.zh-CN.md) |
+| Release changes | [Changelog](../CHANGELOG.md) | [变更日志](../CHANGELOG.zh-CN.md) |
 | First installation and safe Binance preparation | [Beginner guide](BEGINNER_GUIDE.md) | [零基础教程](BEGINNER_GUIDE.zh-CN.md) |
 | Security and vulnerability reporting | [Security policy](../SECURITY.md) | [安全政策](../SECURITY.zh-CN.md) |
 | Contributing changes | [Contributing](../CONTRIBUTING.md) | [参与贡献](../CONTRIBUTING.zh-CN.md) |

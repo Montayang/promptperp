@@ -53,6 +53,7 @@ def test_safety_documents_exist():
 def test_user_documentation_is_bilingual_and_cross_linked():
     pairs = (
         ("README.md", "README.zh-CN.md"),
+        ("CHANGELOG.md", "CHANGELOG.zh-CN.md"),
         ("docs/README.md", "docs/README.zh-CN.md"),
         ("docs/BEGINNER_GUIDE.md", "docs/BEGINNER_GUIDE.zh-CN.md"),
         ("SECURITY.md", "SECURITY.zh-CN.md"),

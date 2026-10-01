@@ -1,5 +1,7 @@
 # Changelog
 
+**English** | [简体中文](CHANGELOG.zh-CN.md)
+
 All notable changes to PromptPerp will be documented here. The project follows
 Semantic Versioning after the first tagged release.
 
@@ -15,6 +17,9 @@ Semantic Versioning after the first tagged release.
 
 ### Security
 
+- Updated `aiohttp`, `idna` and `urllib3` to versions with no known vulnerabilities
+  in the audited lock snapshot.
+- Pinned GitHub Actions to reviewed immutable release commits.
 - The public distribution excludes proprietary strategies and live strategy services.
 - Tests block network and SMTP access and scan source and artifacts for secret-like
   material.
