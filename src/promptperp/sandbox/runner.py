@@ -118,9 +118,6 @@ class SandboxRunner:
         events: tuple[MarketEvent, ...],
         state: EngineState,
     ) -> SandboxResult:
-        capability = self.probe()
-        if not capability.available:
-            return SandboxResult(TerminationReason.CAPABILITY_UNAVAILABLE, None, None)
         request = canonical_json(
             {
                 "schema_version": 1,
@@ -141,6 +138,9 @@ class SandboxRunner:
         )
         if len(request) > self.limits.input_bytes:
             return SandboxResult(TerminationReason.RESOURCE_LIMIT, None, None)
+        capability = self.probe()
+        if not capability.available:
+            return SandboxResult(TerminationReason.CAPABILITY_UNAVAILABLE, None, None)
         with tempfile.TemporaryDirectory(prefix="promptperp-sandbox-") as temporary:
             root = Path(temporary)
             stage = root / "app"

@@ -11,6 +11,8 @@ This checklist must pass before changing `Montayang/promptperp` to public.
 - [ ] Gitleaks scans the complete public history with no findings.
 - [ ] The quality workflow passes from a clean checkout.
 - [ ] Built wheel and sdist contain only expected public files.
+- [ ] The real Bubblewrap sandbox acceptance passes (not skips) on a compatible
+      Linux release host.
 
 ## GitHub settings
 

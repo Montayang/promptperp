@@ -23,7 +23,13 @@ from promptperp.approvals import (
     ApprovalState,
 )
 from promptperp.evaluation import evaluate_strategy
-from promptperp.sandbox import SandboxLimits, SandboxRunner, TerminationReason
+from promptperp.sandbox import (
+    SandboxCapability,
+    SandboxLimits,
+    SandboxResult,
+    SandboxRunner,
+    TerminationReason,
+)
 from promptperp.signal_engine import (
     EngineState,
     MarketEvent,
@@ -177,6 +183,30 @@ def make_ledger(tmp_path):
         tmp_path / "approvals.sqlite3",
         operator_token_digest=ApprovalLedger.token_digest(OPERATOR_TOKEN),
     )
+
+
+class InProcessSandbox(SandboxRunner):
+    """Deterministic test double for pipeline logic, never used by production."""
+
+    def probe(self):
+        return SandboxCapability(True, "in-process-test-double", "available")
+
+    def run(self, *, spec, events, state):
+        engine = SignalEngine(spec, state)
+        proposals = []
+        for item in events:
+            emitted, _ = engine.process(item, accepted_at=item.observed_at)
+            proposals.extend(proposal.to_dict() for proposal in emitted)
+        return SandboxResult(
+            TerminationReason.COMPLETED,
+            {
+                "schema_version": 1,
+                "status": "OK",
+                "proposals": proposals,
+                "state": engine.state.to_dict(),
+            },
+            0,
+        )
 
 
 def make_policy(**changes):
@@ -430,7 +460,9 @@ def test_denied_revoked_and_expired_approvals_cannot_be_consumed(tmp_path):
 def test_linux_sandbox_executes_only_trusted_interpreter_with_clean_namespace():
     runner = SandboxRunner(limits=SandboxLimits(timeout_seconds=5))
     assert "--unshare-user" not in runner._base_bwrap()
-    assert runner.probe().available
+    capability = runner.probe()
+    if not capability.available:
+        pytest.skip(f"host sandbox acceptance unavailable: {capability.reason}")
     spec = loaded_spec()
     events = tuple(
         MarketEvent.from_mapping(raw) for raw in (event(1, "1"), event(2, "3"))
@@ -446,6 +478,34 @@ def test_sandbox_unavailable_fails_closed(monkeypatch):
     monkeypatch.setattr(runner, "bwrap", None)
     result = runner.run(spec=loaded_spec(), events=(), state=EngineState())
     assert result.reason is TerminationReason.CAPABILITY_UNAVAILABLE
+
+
+def test_pipeline_does_not_consume_approval_without_sandbox(tmp_path, monkeypatch):
+    root, verified, _ = build_verified(tmp_path)
+    ledger = make_ledger(tmp_path)
+    binding = make_binding(verified)
+    ledger.request(binding)
+    ledger.decide(
+        binding.request_id,
+        decision=ApprovalDecision.GRANT,
+        operator_token=OPERATOR_TOKEN,
+        occurred_at=NOW + timedelta(seconds=1),
+        reason="offline fail-closed check",
+    )
+    sandbox = SandboxRunner()
+    monkeypatch.setattr(sandbox, "bwrap", None)
+    supervisor = PipelineSupervisor(
+        bundle_root=root,
+        trust_roots={"test-operator": SIGNING_KEY},
+        approval_ledger=ledger,
+        approval_binding=binding,
+        policy=make_policy(),
+        state_path=tmp_path / "unavailable.json",
+        sandbox=sandbox,
+    )
+    with pytest.raises(AgentPipelineError, match="isolation is unavailable"):
+        supervisor.start(checked_at=NOW + timedelta(seconds=2))
+    assert ledger.state(binding.request_id) is ApprovalState.GRANTED
 
 
 def test_sandbox_input_resource_limit_blocks_before_process_start():
@@ -476,6 +536,7 @@ def test_pipeline_end_to_end_consumes_approval_deduplicates_and_never_executes(
         approval_binding=binding,
         policy=make_policy(),
         state_path=state_path,
+        sandbox=InProcessSandbox(),
     )
     assert (
         supervisor.start(checked_at=NOW + timedelta(seconds=2))
@@ -513,6 +574,7 @@ def test_pipeline_recovery_reverifies_consumed_approval_and_checkpoint(tmp_path)
         approval_binding=binding,
         policy=make_policy(),
         state_path=state_path,
+        sandbox=InProcessSandbox(),
     )
     first.start(checked_at=NOW + timedelta(seconds=2))
     first.run_batch((MarketEvent.from_mapping(event(1, "1")),))
@@ -523,6 +585,7 @@ def test_pipeline_recovery_reverifies_consumed_approval_and_checkpoint(tmp_path)
         approval_binding=binding,
         policy=make_policy(),
         state_path=state_path,
+        sandbox=InProcessSandbox(),
     )
     assert (
         recovered.recover(checked_at=NOW + timedelta(seconds=3))
@@ -552,6 +615,7 @@ def test_pipeline_rejects_policy_change_unapproved_bundle_and_consumed_replay(tm
         approval_binding=binding,
         policy=make_policy(risk_policy_fingerprint="d" * 64),
         state_path=tmp_path / "wrong.json",
+        sandbox=InProcessSandbox(),
     )
     with pytest.raises(AgentPipelineError, match="does not bind"):
         mismatched.start(checked_at=NOW + timedelta(seconds=2))
@@ -563,6 +627,7 @@ def test_pipeline_rejects_policy_change_unapproved_bundle_and_consumed_replay(tm
         approval_binding=binding,
         policy=make_policy(),
         state_path=tmp_path / "valid.json",
+        sandbox=InProcessSandbox(),
     )
     valid.start(checked_at=NOW + timedelta(seconds=2))
     replay = PipelineSupervisor(
@@ -572,6 +637,7 @@ def test_pipeline_rejects_policy_change_unapproved_bundle_and_consumed_replay(tm
         approval_binding=binding,
         policy=make_policy(),
         state_path=tmp_path / "replay.json",
+        sandbox=InProcessSandbox(),
     )
     with pytest.raises(AgentPipelineError, match="active granted"):
         replay.start(checked_at=NOW + timedelta(seconds=3))

@@ -3,9 +3,12 @@
 The default test suite must not reach Binance, SMTP or any other network service and
 must never be run with live credentials.
 
-The sandbox acceptance tests require Linux with unprivileged user and network
-namespaces, `bubblewrap`, and `unshare`. Missing or disabled isolation is a test
-failure; the suite does not silently skip this boundary.
+The real sandbox acceptance requires Linux with unprivileged user and network
+namespaces, `bubblewrap`, and `unshare`. Portable CI reports that host-specific
+test as skipped when the runner forbids the required mounts. It still verifies
+that unavailable isolation fails closed, and pipeline logic uses an explicitly
+injected test double. Release acceptance must run the real sandbox test on a
+compatible Linux host; a skip is not a release pass.
 
 ```bash
 python -m pip install -r requirements.txt -r requirements-dev.txt
