@@ -10,6 +10,10 @@ that unavailable isolation fails closed, and pipeline logic uses an explicitly
 injected test double. Release acceptance must run the real sandbox test on a
 compatible Linux host; a skip is not a release pass.
 
+The quality script applies the same rule to the offline Agent example: it runs
+the example when the real sandbox probe succeeds and prints an explicit skip on
+restricted hosted runners. It never substitutes an unisolated production path.
+
 ```bash
 python -m pip install -r requirements.txt -r requirements-dev.txt
 python -m pip install --no-deps -e .

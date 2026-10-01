@@ -34,7 +34,11 @@ python -m mypy \
 python -m pytest
 python examples/offline_accounting.py
 python examples/offline_platform.py
-python examples/offline_agent_pipeline.py
+if python -c 'from promptperp.sandbox import SandboxRunner; raise SystemExit(0 if SandboxRunner().probe().available else 1)'; then
+  python examples/offline_agent_pipeline.py
+else
+  echo "SKIP: offline Agent example requires host sandbox acceptance"
+fi
 python examples/offline_deployment_drill.py
 python scripts/scan_repository.py
 python -m pip check
