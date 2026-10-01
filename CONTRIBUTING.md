@@ -1,5 +1,7 @@
 # Contributing
 
+**English** | [简体中文](CONTRIBUTING.zh-CN.md)
+
 PromptPerp accepts security, reliability, documentation and strategy-interface
 improvements. A contribution must not include proprietary strategies, credentials,
 account data, investor data, logs, runtime state, datasets or server details.
