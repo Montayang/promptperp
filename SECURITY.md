@@ -1,9 +1,12 @@
 # Security policy
 
+**English** | [简体中文](SECURITY.zh-CN.md)
+
 ## Supported versions
 
-PromptPerp is pre-release software. Only the latest `main` revision is supported until
-the first tagged release. No version or fix constitutes authorization for live trading.
+PromptPerp is pre-release software. Only the latest tagged release and the latest
+`main` revision are supported. No version or fix constitutes authorization for live
+trading.
 
 ## Reporting a vulnerability
 

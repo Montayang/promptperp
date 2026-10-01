@@ -50,6 +50,31 @@ def test_safety_documents_exist():
     assert (REPOSITORY_ROOT / "docs" / "TESTING_SAFETY.md").is_file()
 
 
+def test_user_documentation_is_bilingual_and_cross_linked():
+    pairs = (
+        ("README.md", "README.zh-CN.md"),
+        ("docs/README.md", "docs/README.zh-CN.md"),
+        ("docs/BEGINNER_GUIDE.md", "docs/BEGINNER_GUIDE.zh-CN.md"),
+        ("SECURITY.md", "SECURITY.zh-CN.md"),
+        ("CONTRIBUTING.md", "CONTRIBUTING.zh-CN.md"),
+    )
+
+    for english_name, chinese_name in pairs:
+        english_path = REPOSITORY_ROOT / english_name
+        chinese_path = REPOSITORY_ROOT / chinese_name
+        assert english_path.is_file(), english_name
+        assert chinese_path.is_file(), chinese_name
+
+        english_header = "\n".join(
+            english_path.read_text(encoding="utf-8").splitlines()[:8]
+        )
+        chinese_header = "\n".join(
+            chinese_path.read_text(encoding="utf-8").splitlines()[:8]
+        )
+        assert Path(chinese_name).name in english_header, english_name
+        assert Path(english_name).name in chinese_header, chinese_name
+
+
 def test_private_strategy_modules_are_absent():
     forbidden = (
         SOURCE_ROOT / "promptperp" / "Clients",

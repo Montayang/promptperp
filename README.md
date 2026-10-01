@@ -1,5 +1,7 @@
 # PromptPerp
 
+**English** | [简体中文](README.zh-CN.md)
+
 AI-native, safety-gated infrastructure for Binance USDⓈ-M Futures strategies.
 
 PromptPerp turns a structured strategy idea into a reproducible candidate package,
@@ -53,6 +55,11 @@ foreign positions, ownership ambiguity and failed protection all block new risk.
 
 ## Offline quick start
 
+If you do not program or have never managed a Linux server, start with the
+[step-by-step beginner guide](docs/BEGINNER_GUIDE.md). It explains server preparation,
+installation, offline verification and safe Binance API-key preparation without
+pretending that this alpha is a turnkey live-trading product.
+
 Use Python 3.12 for the tested development environment:
 
 ```bash
@@ -93,6 +100,9 @@ compatibility evidence, not a performance claim or a recommendation to trade.
 
 ## Documentation
 
+- [User documentation index and language policy](docs/README.md)
+- [Beginner guide](docs/BEGINNER_GUIDE.md) — server, installation, offline use and
+  Binance API safety for non-programmers
 - [Architecture](docs/ARCHITECTURE.md)
 - [Agent strategy pipeline](docs/AGENT_STRATEGY_PIPELINE.md)
 - [Threat model](docs/THREAT_MODEL.md)
