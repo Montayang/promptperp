@@ -10,6 +10,7 @@
 | 用途 | English | 简体中文 |
 |---|---|---|
 | 项目概览 | [README](../README.md) | [项目说明](../README.zh-CN.md) |
+| 版本变化 | [Changelog](../CHANGELOG.md) | [变更日志](../CHANGELOG.zh-CN.md) |
 | 首次安装与安全准备币安 | [Beginner guide](BEGINNER_GUIDE.md) | [零基础教程](BEGINNER_GUIDE.zh-CN.md) |
 | 安全与漏洞报告 | [Security policy](../SECURITY.md) | [安全政策](../SECURITY.zh-CN.md) |
 | 参与项目开发 | [Contributing](../CONTRIBUTING.md) | [参与贡献](../CONTRIBUTING.zh-CN.md) |
