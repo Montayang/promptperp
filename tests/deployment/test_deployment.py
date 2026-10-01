@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sys
 import zipfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -98,7 +99,7 @@ def prepare_and_install(
     OfflineInstaller(manager).install(
         release_fingerprint=manifest.fingerprint,
         wheelhouse=wheelhouse,
-        python_executable="/usr/bin/python3.12",
+        python_executable=sys.executable,
         installed_at=NOW,
     )
 
