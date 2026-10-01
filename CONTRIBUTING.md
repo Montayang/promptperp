@@ -6,6 +6,14 @@ account data, investor data, logs, runtime state, datasets or server details.
 
 ## Development setup
 
+The complete safety suite requires Linux with unprivileged user and network
+namespaces enabled, plus `bubblewrap` and `unshare`. On Debian or Ubuntu, install
+the tools with:
+
+```bash
+sudo apt-get install bubblewrap util-linux
+```
+
 Use Python 3.12 and work on a topic branch:
 
 ```bash

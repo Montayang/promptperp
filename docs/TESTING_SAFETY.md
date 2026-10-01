@@ -3,6 +3,10 @@
 The default test suite must not reach Binance, SMTP or any other network service and
 must never be run with live credentials.
 
+The sandbox acceptance tests require Linux with unprivileged user and network
+namespaces, `bubblewrap`, and `unshare`. Missing or disabled isolation is a test
+failure; the suite does not silently skip this boundary.
+
 ```bash
 python -m pip install -r requirements.txt -r requirements-dev.txt
 python -m pip install --no-deps -e .
