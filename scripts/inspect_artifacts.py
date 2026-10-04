@@ -23,7 +23,12 @@ FORBIDDEN_PARTS = {
     ".env",
     "__pycache__",
 }
-PRIVATE_MARKERS = (b"bian" + b"bot", b"monday_" + b"original")
+PRIVATE_MARKERS = (
+    b"bian" + b"bot",
+    b"monday_" + b"original",
+    b"buffered_" + b"relative_momentum",
+    b"br" + b"m-production-",
+)
 
 
 def inspect_member(name: str, content: bytes) -> None:

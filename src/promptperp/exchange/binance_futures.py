@@ -3,6 +3,8 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Any, Callable
 
+from binance_common.errors import BadRequestError
+
 from promptperp.config import RuntimeConfig
 from promptperp.domain import (
     AccountBalance,
@@ -188,6 +190,22 @@ class BinanceFuturesAdapter:
                 new_order_resp_type="RESULT",
             )
         except Exception as exc:
+            # This SDK drops Binance's numeric error code. Recognize only exact
+            # documented non-execution rejections; unfamiliar/timeout messages
+            # remain uncertain and must be queried by deterministic client ID.
+            if (
+                isinstance(exc, BadRequestError)
+                and exc.status_code == 400
+                and exc.error_message
+                in {
+                    "Margin is insufficient.",
+                    "Balance is insufficient.",
+                    "Precision is over the maximum defined for this asset.",
+                }
+            ):
+                raise RequestRejected(
+                    "exchange definitively rejected market order"
+                ) from exc
             raise RequestUnknown("market-order outcome is unknown") from exc
         try:
             order = self._order(response, "market order")
@@ -225,6 +243,8 @@ class BinanceFuturesAdapter:
                     "filled market-order execution details remain incomplete"
                 )
         if order.status is OrderStatus.REJECTED:
+            if order.executed_quantity:
+                raise RequestUnknown("rejected response unexpectedly reports fills")
             raise RequestRejected("market order was rejected")
         return order
 

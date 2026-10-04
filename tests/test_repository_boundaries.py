@@ -56,6 +56,7 @@ def test_user_documentation_is_bilingual_and_cross_linked():
         ("CHANGELOG.md", "CHANGELOG.zh-CN.md"),
         ("docs/README.md", "docs/README.zh-CN.md"),
         ("docs/BEGINNER_GUIDE.md", "docs/BEGINNER_GUIDE.zh-CN.md"),
+        ("docs/SHARED_EXECUTION.md", "docs/SHARED_EXECUTION.zh-CN.md"),
         ("SECURITY.md", "SECURITY.zh-CN.md"),
         ("CONTRIBUTING.md", "CONTRIBUTING.zh-CN.md"),
     )

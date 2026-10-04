@@ -34,6 +34,7 @@ python -m mypy \
 python -m pytest
 python examples/offline_accounting.py
 python examples/offline_platform.py
+python examples/offline_shared_execution.py
 if python -c 'from promptperp.sandbox import SandboxRunner; raise SystemExit(0 if SandboxRunner().probe().available else 1)'; then
   python examples/offline_agent_pipeline.py
 else

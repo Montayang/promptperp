@@ -13,7 +13,12 @@ FORBIDDEN_PUBLIC_PREFIXES = (
     "src/promptperp/Clients/",
     "src/promptperp/Strategies/",
 )
-FORBIDDEN_PUBLIC_TOKENS = ("bian" + "bot", "monday_" + "original")
+FORBIDDEN_PUBLIC_TOKENS = (
+    "bian" + "bot",
+    "monday_" + "original",
+    "buffered_" + "relative_momentum",
+    "br" + "m-production-",
+)
 EXPECTED_STRATEGY_MODULES = {
     "src/promptperp/strategies/__init__.py",
     "src/promptperp/strategies/base.py",

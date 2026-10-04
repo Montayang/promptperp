@@ -15,6 +15,7 @@ links at the top.
 | First installation and safe Binance preparation | [Beginner guide](BEGINNER_GUIDE.md) | [零基础教程](BEGINNER_GUIDE.zh-CN.md) |
 | Security and vulnerability reporting | [Security policy](../SECURITY.md) | [安全政策](../SECURITY.zh-CN.md) |
 | Contributing changes | [Contributing](../CONTRIBUTING.md) | [参与贡献](../CONTRIBUTING.zh-CN.md) |
+| Shared execution and equity history | [Integration guide](SHARED_EXECUTION.md) | [集成说明](SHARED_EXECUTION.zh-CN.md) |
 
 ## Language policy
 

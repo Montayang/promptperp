@@ -3,6 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
+from binance_common.errors import BadRequestError
 
 from promptperp.config import ExternalEffectBlocked, RuntimeConfig, RuntimeMode
 from promptperp.domain import (
@@ -204,6 +205,67 @@ def test_offline_market_order_is_blocked_before_sdk_access():
         )
 
     assert rest.calls == []
+
+
+@pytest.mark.parametrize(
+    "message, expected",
+    [
+        ("Margin is insufficient.", RequestRejected),
+        ("Balance is insufficient.", RequestRejected),
+        ("Precision is over the maximum defined for this asset.", RequestRejected),
+        ("execution status unknown", RequestUnknown),
+        ("unrecognized rejection text", RequestUnknown),
+    ],
+)
+def test_only_proven_bad_request_rejections_are_definitive(message, expected):
+    class RejectedRest(FakeRestAPI):
+        def new_order(self, **kwargs):
+            self.calls.append(("new_order", kwargs))
+            raise BadRequestError(message, 400)
+
+    rest = RejectedRest()
+    config = RuntimeConfig(
+        mode=RuntimeMode.TESTNET,
+        external_effects_enabled=True,
+        api_key="offline-key",
+        api_secret="offline-secret",
+    )
+    adapter = BinanceFuturesAdapter(rest_api=rest, runtime_config=config)
+    with pytest.raises(expected):
+        adapter.place_market_order(
+            symbol="BTCUSDT",
+            side=OrderSide.BUY,
+            position_side=PositionSide.LONG,
+            quantity=Decimal("0.1"),
+            client_order_id="owned",
+        )
+    assert len(rest.calls) == 1
+
+
+def test_rejected_response_with_fills_remains_uncertain():
+    class RejectedWithFill(FakeRestAPI):
+        def new_order(self, **kwargs):
+            data = super().new_order(**kwargs).data()
+            data["status"] = "REJECTED"
+            return Response(data)
+
+    adapter = BinanceFuturesAdapter(
+        rest_api=RejectedWithFill(),
+        runtime_config=RuntimeConfig(
+            mode=RuntimeMode.TESTNET,
+            external_effects_enabled=True,
+            api_key="offline-key",
+            api_secret="offline-secret",
+        ),
+    )
+    with pytest.raises(RequestUnknown, match="unexpectedly reports fills"):
+        adapter.place_market_order(
+            symbol="BTCUSDT",
+            side=OrderSide.BUY,
+            position_side=PositionSide.LONG,
+            quantity=Decimal("0.1"),
+            client_order_id="owned",
+        )
 
 
 def test_testnet_market_order_returns_domain_order_and_idempotency_key():
