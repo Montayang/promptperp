@@ -24,6 +24,8 @@ independent open-source project and is not affiliated with or endorsed by Binanc
 - Fail-closed Binance USDⓈ-M adapters, execution recovery and protection ownership.
 - Portfolio and per-intent risk gates with kill-switch/degraded modes.
 - An optional shared-account investor ledger and reporting subsystem.
+- Optional [virtual ownership, basket execution and equity-history components](docs/SHARED_EXECUTION.md)
+  for downstream integrations; no live worker or overlapping-position mode is enabled automatically.
 - Offline deployment, promotion, backup, rollback and health primitives.
 - One deliberately simple example strategy: `threshold_momentum`.
 

@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import pytest
 
+from promptperp.domain import OrderSide, PositionSide, ResponseShapeError
 from promptperp.exchange import BinanceAccountEventReader
 
 
@@ -29,6 +30,10 @@ class RestApi:
                     "id": 7,
                     "orderId": 42,
                     "time": 1_700_000_000_000,
+                    "side": "BUY",
+                    "positionSide": "LONG",
+                    "qty": "0.25",
+                    "price": "50000",
                     "realizedPnl": "12.5",
                     "commission": "0.25",
                     "commissionAsset": "USDT",
@@ -61,6 +66,11 @@ def test_reader_normalizes_trade_and_funding_without_mutation_calls():
         start_ms=1_700_000_000_000,
         end_ms=1_700_000_200_000,
     )
+    fills = reader.list_fills(
+        symbol="btcusdt",
+        start_ms=1_700_000_000_000,
+        end_ms=1_700_000_200_000,
+    )
     funding = reader.list_funding(
         start_ms=1_700_000_000_000,
         end_ms=1_700_000_200_000,
@@ -68,6 +78,12 @@ def test_reader_normalizes_trade_and_funding_without_mutation_calls():
 
     assert trades[0].event_id == "binance:trade:BTCUSDT:7"
     assert trades[0].realized_pnl == Decimal("12.5")
+    assert fills[0].event_id == "binance:fill:BTCUSDT:7"
+    assert fills[0].fill.side is OrderSide.BUY
+    assert fills[0].fill.position_side is PositionSide.LONG
+    assert fills[0].fill.quantity == Decimal("0.25")
+    assert fills[0].fill.price == Decimal("50000")
+    assert fills[0].realized_pnl == Decimal("12.5")
     assert funding[0].event_id == "binance:funding:99"
     assert funding[0].amount == Decimal("-0.5")
     assert rest_api.trade_calls[0]["symbol"] == "BTCUSDT"
@@ -109,4 +125,31 @@ def test_reader_rejects_oversized_trade_window():
             symbol="BTCUSDT",
             start_ms=0,
             end_ms=8 * 24 * 60 * 60 * 1000,
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("positionSide", "BOTH", "unsupported"),
+        ("qty", "0", "quantity must be positive"),
+        ("price", "0", "price must be positive"),
+    ],
+)
+def test_reader_rejects_fills_that_cannot_be_safely_attributed(field, value, message):
+    rest_api = RestApi()
+    original = rest_api.account_trade_list
+
+    def invalid_fill(**kwargs):
+        response = original(**kwargs)
+        response.value[0][field] = value
+        return response
+
+    rest_api.account_trade_list = invalid_fill
+
+    with pytest.raises(ResponseShapeError, match=message):
+        BinanceAccountEventReader(rest_api=rest_api).list_fills(
+            symbol="BTCUSDT",
+            start_ms=1_700_000_000_000,
+            end_ms=1_700_000_200_000,
         )

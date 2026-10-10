@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import ROUND_DOWN, Decimal
 from enum import Enum
 
@@ -148,3 +149,20 @@ class Fill:
             raise ValueError("invalid fill amount")
         if not self.commission_asset:
             raise ValueError("commission asset is required")
+
+
+@dataclass(frozen=True)
+class FuturesTradeFill:
+    fill: Fill
+    occurred_at: datetime
+    realized_pnl: Decimal
+
+    def __post_init__(self) -> None:
+        if self.occurred_at.tzinfo is None:
+            raise ValueError("fill time must be timezone-aware")
+        if not self.realized_pnl.is_finite():
+            raise ValueError("fill realized PnL must be finite")
+
+    @property
+    def event_id(self) -> str:
+        return f"binance:fill:{self.fill.symbol}:{self.fill.trade_id}"

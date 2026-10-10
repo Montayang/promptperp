@@ -5,7 +5,14 @@ from decimal import Decimal
 from typing import Any, Callable
 
 from promptperp.accounting.exchange_events import ExchangeFunding, ExchangeTrade
-from promptperp.domain import RequestUnknown, ResponseShapeError
+from promptperp.domain import (
+    Fill,
+    FuturesTradeFill,
+    OrderSide,
+    PositionSide,
+    RequestUnknown,
+    ResponseShapeError,
+)
 
 
 class BinanceAccountEventReader:
@@ -19,6 +26,29 @@ class BinanceAccountEventReader:
     def list_trades(
         self, *, symbol: str, start_ms: int, end_ms: int
     ) -> tuple[ExchangeTrade, ...]:
+        normalized_symbol, rows = self._trade_rows(
+            symbol=symbol, start_ms=start_ms, end_ms=end_ms
+        )
+        trades = tuple(self._trade(item, normalized_symbol) for item in rows)
+        return tuple(sorted(trades, key=lambda item: (item.occurred_at, item.trade_id)))
+
+    def list_fills(
+        self, *, symbol: str, start_ms: int, end_ms: int
+    ) -> tuple[FuturesTradeFill, ...]:
+        normalized_symbol, rows = self._trade_rows(
+            symbol=symbol, start_ms=start_ms, end_ms=end_ms
+        )
+        fills = tuple(self._fill(item, normalized_symbol) for item in rows)
+        return tuple(
+            sorted(
+                fills,
+                key=lambda item: (item.occurred_at, item.fill.trade_id),
+            )
+        )
+
+    def _trade_rows(
+        self, *, symbol: str, start_ms: int, end_ms: int
+    ) -> tuple[str, tuple[dict[str, Any], ...]]:
         self._validate_window(start_ms, end_ms, maximum_days=7)
         normalized_symbol = symbol.upper()
         first = self._rows(
@@ -68,8 +98,7 @@ class BinanceAccountEventReader:
             if not page or self._required_int(page[-1], "time", "trade") > end_ms:
                 break
 
-        trades = tuple(self._trade(item, normalized_symbol) for item in rows)
-        return tuple(sorted(trades, key=lambda item: (item.occurred_at, item.trade_id)))
+        return normalized_symbol, tuple(rows)
 
     def list_funding(
         self, *, start_ms: int, end_ms: int
@@ -186,6 +215,37 @@ class BinanceAccountEventReader:
             ).upper(),
         )
 
+    def _fill(self, value: dict[str, Any], expected_symbol: str) -> FuturesTradeFill:
+        symbol = self._required_text(value, "symbol", "trade").upper()
+        if symbol != expected_symbol:
+            raise ResponseShapeError("trade history returned an unexpected symbol")
+        try:
+            side = OrderSide(self._required_text(value, "side", "trade").upper())
+            position_side = PositionSide(
+                self._required_text(value, "positionSide", "trade").upper()
+            )
+        except ValueError as exc:
+            raise ResponseShapeError(
+                "trade side or position side is unsupported"
+            ) from exc
+        return FuturesTradeFill(
+            fill=Fill(
+                symbol=symbol,
+                trade_id=self._required_text(value, "id", "trade"),
+                order_id=self._required_text(value, "orderId", "trade"),
+                side=side,
+                position_side=position_side,
+                quantity=self._positive_decimal(value.get("qty"), "trade quantity"),
+                price=self._positive_decimal(value.get("price"), "trade price"),
+                commission=self._decimal(value.get("commission"), "commission"),
+                commission_asset=self._required_text(
+                    value, "commissionAsset", "trade"
+                ).upper(),
+            ),
+            occurred_at=self._timestamp(value, "time", "trade"),
+            realized_pnl=self._decimal(value.get("realizedPnl"), "realized PnL"),
+        )
+
     def _funding(self, value: dict[str, Any]) -> ExchangeFunding:
         if self._required_text(value, "incomeType", "funding") != "FUNDING_FEE":
             raise ResponseShapeError("income history returned a non-funding row")
@@ -260,6 +320,13 @@ class BinanceAccountEventReader:
             raise ResponseShapeError(f"{field} is missing or invalid") from exc
         if not result.is_finite():
             raise ResponseShapeError(f"{field} is not finite")
+        return result
+
+    @classmethod
+    def _positive_decimal(cls, value: Any, field: str) -> Decimal:
+        result = cls._decimal(value, field)
+        if result <= 0:
+            raise ResponseShapeError(f"{field} must be positive")
         return result
 
     @staticmethod
