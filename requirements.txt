@@ -2,7 +2,7 @@
 # pyproject.toml is the canonical dependency declaration. Spot and Wallet SDKs
 # are optional extras there and are not installed in this snapshot.
 aiodns==4.0.0
-aiohappyeyeballs==2.6.1
+aiohappyeyeballs==2.7.1
 aiohttp==3.14.3
 aiosignal==1.4.0
 annotated-types==0.7.0
