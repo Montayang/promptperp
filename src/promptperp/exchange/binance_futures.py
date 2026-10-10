@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from decimal import Decimal
 from typing import Any, Callable
 
@@ -190,18 +191,17 @@ class BinanceFuturesAdapter:
                 new_order_resp_type="RESULT",
             )
         except Exception as exc:
-            # This SDK drops Binance's numeric error code. Recognize only exact
-            # documented non-execution rejections; unfamiliar/timeout messages
-            # remain uncertain and must be queried by deterministic client ID.
+            # Current SDK versions preserve the exchange code; older transports
+            # may report HTTP 400 instead. Require a reviewed code/message pair.
+            rejected_codes = {
+                "Margin is insufficient.": -2019,
+                "Balance is insufficient.": -2018,
+                "Precision is over the maximum defined for this asset.": -1111,
+            }
             if (
                 isinstance(exc, BadRequestError)
-                and exc.status_code == 400
-                and exc.error_message
-                in {
-                    "Margin is insufficient.",
-                    "Balance is insufficient.",
-                    "Precision is over the maximum defined for this asset.",
-                }
+                and exc.error_message in rejected_codes
+                and exc.status_code in {400, rejected_codes[exc.error_message]}
             ):
                 raise RequestRejected(
                     "exchange definitively rejected market order"
@@ -218,7 +218,14 @@ class BinanceFuturesAdapter:
             ):
                 raise
             try:
-                order = self.get_order(symbol=symbol, order_id=str(order_id))
+                order = self._confirm_filled_order(
+                    symbol,
+                    str(order_id),
+                    client_order_id,
+                    side,
+                    position_side,
+                    quantity,
+                )
             except (RequestUnknown, ResponseShapeError) as refresh_exc:
                 raise RequestUnknown(
                     "filled market-order execution details remain incomplete"
@@ -231,7 +238,14 @@ class BinanceFuturesAdapter:
             # transient shape to the durable state machine: reconcile the known
             # order identity first, using a read that is safe to retry.
             try:
-                order = self.get_order(symbol=symbol, order_id=order.order_id)
+                order = self._confirm_filled_order(
+                    symbol,
+                    order.order_id,
+                    client_order_id,
+                    side,
+                    position_side,
+                    quantity,
+                )
             except (RequestUnknown, ResponseShapeError) as exc:
                 raise RequestUnknown(
                     "filled market-order execution details remain incomplete"
@@ -247,6 +261,80 @@ class BinanceFuturesAdapter:
                 raise RequestUnknown("rejected response unexpectedly reports fills")
             raise RequestRejected("market order was rejected")
         return order
+
+    def _confirm_filled_order(
+        self,
+        symbol: str,
+        order_id: str,
+        client_order_id: str,
+        side: OrderSide,
+        position_side: PositionSide,
+        quantity: Decimal,
+    ) -> Order:
+        """Resolve incomplete FILLED acknowledgements using reads, never writes.
+
+        The injected transport must bound individual request timeouts and disable
+        automatic mutation retries. Exhaustion leaves the outcome UNKNOWN.
+        """
+        delays = (0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 4.0)
+        for attempt, delay in enumerate(delays):
+            if delay:
+                time.sleep(delay)
+            try:
+                identifiers = (
+                    {"order_id": order_id}
+                    if attempt == 0
+                    else {"orig_client_order_id": client_order_id}
+                )
+                response = self._read(
+                    "filled order query",
+                    lambda: self._rest_api.query_order(
+                        symbol=symbol.upper(), **identifiers
+                    ),
+                )
+            except RequestUnknown as exc:
+                # Only an explicit missing-index result after a FILLED ack may
+                # lag. Rate limits, transport errors and other codes are faults.
+                if (
+                    getattr(exc.__cause__, "status_code", None) != -2013
+                    or attempt == len(delays) - 1
+                ):
+                    raise
+                continue
+            data = self._mapping(self._response_data(response), "filled order query")
+            if (
+                data.get("symbol") != symbol.upper()
+                or str(data.get("orderId", data.get("order_id"))) != order_id
+                or data.get("clientOrderId", data.get("client_order_id"))
+                != client_order_id
+                or data.get("side") != side.value
+                or data.get("positionSide", data.get("position_side"))
+                != position_side.value
+                or self._positive_decimal(
+                    data.get("origQty", data.get("orig_qty", data.get("quantity"))),
+                    "requested quantity",
+                )
+                != quantity
+            ):
+                raise RequestUnknown("filled order confirmation identity mismatch")
+            executed = self._decimal(
+                data.get("executedQty", data.get("executed_qty", 0)),
+                "executed quantity",
+            )
+            average = self._decimal(
+                data.get("avgPrice", data.get("avg_price", 0)), "average price"
+            )
+            if (
+                not 0 <= executed <= quantity
+                or average < 0
+                or data.get("status") not in {"NEW", "PARTIALLY_FILLED", "FILLED"}
+            ):
+                raise RequestUnknown(
+                    "filled order confirmation contradicts acknowledgement"
+                )
+            if data.get("status") == "FILLED" and executed == quantity and average > 0:
+                return self._order(response, "filled order query")
+        raise RequestUnknown("filled market-order execution details remain incomplete")
 
     def get_order(
         self,

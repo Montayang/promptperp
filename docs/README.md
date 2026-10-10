@@ -16,6 +16,7 @@ links at the top.
 | Security and vulnerability reporting | [Security policy](../SECURITY.md) | [安全政策](../SECURITY.zh-CN.md) |
 | Contributing changes | [Contributing](../CONTRIBUTING.md) | [参与贡献](../CONTRIBUTING.zh-CN.md) |
 | Shared execution and equity history | [Integration guide](SHARED_EXECUTION.md) | [集成说明](SHARED_EXECUTION.zh-CN.md) |
+| Execution reliability and recovery | [Reliability guide](EXECUTION_RELIABILITY.md) | [执行可靠性](EXECUTION_RELIABILITY.zh-CN.md) |
 
 ## Language policy
 

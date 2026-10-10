@@ -7,6 +7,13 @@ Semantic Versioning after the first tagged release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Bounded, identity-checked read-only confirmation of incomplete FILLED acknowledgements.
+- Added opt-in exact post-fill convergence with stable refresh scope, durable request
+  budget admission and restart-safe settlement holds, with synthetic regression tests.
+- Documented integration requirements and non-universal policy decisions in both languages.
+
 ### Added
 
 - Generic virtual position ownership, fill recovery and balanced basket execution.

@@ -15,6 +15,7 @@
 | 安全与漏洞报告 | [Security policy](../SECURITY.md) | [安全政策](../SECURITY.zh-CN.md) |
 | 参与项目开发 | [Contributing](../CONTRIBUTING.md) | [参与贡献](../CONTRIBUTING.zh-CN.md) |
 | 共享执行与权益历史 | [Integration guide](SHARED_EXECUTION.md) | [集成说明](SHARED_EXECUTION.zh-CN.md) |
+| 执行可靠性与恢复 | [Reliability guide](EXECUTION_RELIABILITY.md) | [执行可靠性](EXECUTION_RELIABILITY.zh-CN.md) |
 
 ## 双语规则
 
