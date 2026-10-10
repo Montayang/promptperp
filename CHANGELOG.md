@@ -29,6 +29,10 @@ Semantic Versioning after the first tagged release.
 
 ### Security
 
+- Update `multidict` to 6.9.1, `setuptools` to 83.0.0 and `wheel` to 0.46.2
+  for CVE-2026-104874, CVE-2026-59890 and CVE-2026-24049 respectively.
+  Require the patched build-tool versions for isolated source builds as well.
+
 - Added restricted API-permission checks and stricter uncertain-order classification.
 
 - Updated `aiohttp`, `idna` and `urllib3` to versions with no known vulnerabilities
