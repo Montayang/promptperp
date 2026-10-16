@@ -467,3 +467,56 @@ def test_malformed_order_contract_fails_closed(overrides):
 
     with pytest.raises(ResponseShapeError):
         BinanceFuturesAdapter(rest_api=rest).get_order(symbol="BTCUSDT", order_id="123")
+
+
+@pytest.mark.parametrize(
+    "code, message, expected",
+    [
+        (
+            -4164,
+            "Order's notional must be no smaller than 5 (unless you choose reduce only).",
+            RequestRejected,
+        ),
+        (-4164, "Minimum notional threshold changed", RequestRejected),
+        (-2019, "Margin is insufficient.", RequestRejected),
+        (-2018, "Balance is insufficient.", RequestRejected),
+        (
+            -1111,
+            "Precision is over the maximum defined for this asset.",
+            RequestRejected,
+        ),
+        (-2013, "Order does not exist.", RequestUnknown),
+        (-2013, "Margin is insufficient.", RequestUnknown),
+        (-1007, "Timeout waiting for response from backend server.", RequestUnknown),
+        (-4116, "Duplicated clientOrderId.", RequestUnknown),
+        (400, "Minimum notional threshold changed", RequestUnknown),
+        (400, "Order does not exist.", RequestUnknown),
+    ],
+)
+def test_numeric_rejection_codes_do_not_turn_missing_orders_into_non_execution(
+    code, message, expected
+):
+    class RejectedRest(FakeRestAPI):
+        def new_order(self, **kwargs):
+            self.calls.append(("new_order", kwargs))
+            raise BadRequestError(message, code)
+
+    rest = RejectedRest()
+    adapter = BinanceFuturesAdapter(
+        rest_api=rest,
+        runtime_config=RuntimeConfig(
+            mode=RuntimeMode.TESTNET,
+            external_effects_enabled=True,
+            api_key="offline-key",
+            api_secret="offline-secret",
+        ),
+    )
+    with pytest.raises(expected):
+        adapter.place_market_order(
+            symbol="BTCUSDT",
+            side=OrderSide.BUY,
+            position_side=PositionSide.LONG,
+            quantity=Decimal("0.1"),
+            client_order_id="synthetic-rejection",
+        )
+    assert [name for name, _ in rest.calls] == ["new_order"]

@@ -9,6 +9,9 @@ Semantic Versioning after the first tagged release.
 
 ### Fixed
 
+- Recognize numeric minimum-notional rejections, validate actual rebalance increases
+  against required symbol rules, and cover serialized budget clocks with offline tests.
+
 - Bounded, identity-checked read-only confirmation of incomplete FILLED acknowledgements.
 - Added opt-in exact post-fill convergence with stable refresh scope, durable request
   budget admission and restart-safe settlement holds, with synthetic regression tests.

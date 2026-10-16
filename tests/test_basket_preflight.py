@@ -198,6 +198,7 @@ def test_rebalance_closes_stale_and_wrong_side_before_new_risk() -> None:
             (first_short.symbol, PositionSide.SHORT): first_short.quantity,
         },
         target=target,
+        rules=_rules(set(targets)),
     )
 
     assert plan.ordered == plan.reductions + plan.increases
@@ -234,6 +235,7 @@ def test_rebalance_uses_only_supplied_strategy_owned_quantities() -> None:
     plan = plan_basket_rebalance(
         current_quantities={(leg.symbol, leg.position_side): leg.quantity},
         target=target,
+        rules=_rules(set(targets)),
     )
 
     assert not any(
@@ -288,3 +290,56 @@ def test_incomplete_or_wrong_weight_contract_is_rejected() -> None:
             ),
             taker_fee_rate=Decimal("0.0005"),
         )
+
+
+@pytest.mark.parametrize("difference", ["0.001", "0.499", "0.5005"])
+def test_tradeable_target_does_not_authorize_untradeable_increment(difference):
+    targets = _targets()
+    rules = _rules(set(targets))
+    target = preflight_basket(
+        target_weights=targets,
+        prices={s: Decimal("10") for s in targets},
+        rules=rules,
+        policy=BasketPolicy(
+            strategy_equity=Decimal("1000"),
+            target_count_per_side=2,
+            target_weight=Decimal("0.25"),
+        ),
+        taker_fee_rate=Decimal("0"),
+    )
+    leg = target.legs[0]
+    held = {(x.symbol, x.position_side): x.quantity for x in target.legs}
+    held[leg.symbol, leg.position_side] -= Decimal(difference)
+    # Another leg needs reducing: failure must not return a partial transition.
+    other = target.legs[-1]
+    held[other.symbol, other.position_side] += Decimal("1")
+    with pytest.raises(BasketPreflightError, match="INCREASE_NOT_TRADABLE"):
+        plan_basket_rebalance(current_quantities=held, target=target, rules=rules)
+
+
+def test_exact_minimum_increment_and_reduce_only_dust_are_distinct():
+    targets = _targets()
+    rules = _rules(set(targets))
+    target = preflight_basket(
+        target_weights=targets,
+        prices={s: Decimal("10") for s in targets},
+        rules=rules,
+        policy=BasketPolicy(
+            strategy_equity=Decimal("1000"),
+            target_count_per_side=2,
+            target_weight=Decimal("0.25"),
+        ),
+        taker_fee_rate=Decimal("0"),
+    )
+    held = {(x.symbol, x.position_side): x.quantity for x in target.legs}
+    first, last = target.legs[0], target.legs[-1]
+    held[first.symbol, first.position_side] -= Decimal("0.5")
+    held[last.symbol, last.position_side] += Decimal("0.001")
+    plan = plan_basket_rebalance(current_quantities=held, target=target, rules=rules)
+    assert len(plan.increases) == len(plan.reductions) == 1
+    assert plan.increases[0].quantity == Decimal("0.5")
+    assert plan.reductions[0].quantity == Decimal("0.001")
+    assert plan.ordered[0] is plan.reductions[0]
+    del rules[first.symbol]
+    with pytest.raises(BasketPreflightError, match="INCREASE_RULES_UNAVAILABLE"):
+        plan_basket_rebalance(current_quantities=held, target=target, rules=rules)

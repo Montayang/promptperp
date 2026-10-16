@@ -192,16 +192,20 @@ class BinanceFuturesAdapter:
             )
         except Exception as exc:
             # Current SDK versions preserve the exchange code; older transports
-            # may report HTTP 400 instead. Require a reviewed code/message pair.
+            # may report HTTP 400 instead. Numeric -4164 proves a minimum-
+            # notional rejection regardless of the variable threshold text.
+            # Legacy HTTP 400 still requires a reviewed code/message pair.
             rejected_codes = {
                 "Margin is insufficient.": -2019,
                 "Balance is insufficient.": -2018,
                 "Precision is over the maximum defined for this asset.": -1111,
             }
-            if (
-                isinstance(exc, BadRequestError)
-                and exc.error_message in rejected_codes
-                and exc.status_code in {400, rejected_codes[exc.error_message]}
+            if isinstance(exc, BadRequestError) and (
+                exc.status_code == -4164
+                or (
+                    exc.error_message in rejected_codes
+                    and exc.status_code in {400, rejected_codes[exc.error_message]}
+                )
             ):
                 raise RequestRejected(
                     "exchange definitively rejected market order"

@@ -23,6 +23,30 @@ state and synthetic callbacks only; a production audit must be durable.
 | Split settlement batches cause premature permanent faults | `SettlementGate` persists a bounded no-trading hold only for typed `ValuationPending`; unknown ownership/orders remain immediate faults. | `test_settlement_gate.py`: restart deadline, full verification, permanent faults, clock rollback |
 | Shared-account ownership and uncertain writes are confused with retryable transport errors | Existing virtual routes and basket state keep deterministic order identities and require recovery by query. | Basket coordinator, virtual route, recovery and account-turn tests |
 
+## Additional preflight and concurrency safeguards
+
+`plan_basket_rebalance` now requires a keyword-only `rules` mapping. Pass current
+`SymbolRules` for every increased symbol, alongside the preflighted target. A valid
+final position can hide an increment below minimum notional or quantity, or one
+that is off step. These increments reject the whole transition before a partial
+plan is returned. The planner does not round up, silently defer a leg, change the
+basket constraints or impose opening minimum notional on reduce-only dust exits.
+Callers must refresh the rules and preflight again when market conditions change.
+
+The futures adapter recognizes the SDK's numeric `-4164` as a definitive minimum-
+notional rejection even when its threshold message varies. A legacy HTTP 400 with
+unrecognized text remains unknown. Missing-order `-2013`, duplicate client IDs,
+timeouts and unknown codes are never evidence of non-execution. Existing uncertain
+records still require reconciliation; this change does not repair persisted state.
+
+Request-budget reservation already obtains `BEGIN IMMEDIATE` before sampling the
+clock. New deterministic SQLite interleaving tests protect this ordering: a writer
+committing during connection setup or lock wait cannot masquerade as clock rollback.
+Actual backward movement still blocks, and capacity and expiry stay unchanged.
+Integrations adding advisory capacity or priority reads must take their time sample
+and all related reads inside the same serialized snapshot; do not add a time tolerance.
+No priority API or background worker is introduced by these tests.
+
 ## Integration order
 
 1. Compute a conservative request-weight envelope. Include preflight, all possible

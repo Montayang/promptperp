@@ -301,8 +301,14 @@ def plan_basket_rebalance(
     *,
     current_quantities: Mapping[tuple[str, PositionSide], Decimal],
     target: BasketPlan,
+    rules: Mapping[str, SymbolRules],
 ) -> BasketRebalancePlan:
-    """Plan one strategy's close-first transition to a preflighted basket."""
+    """Validate actual increases and plan a close-first basket transition.
+
+    A tradeable final position does not prove its incremental order is tradeable.
+    Reject the whole transition before returning any reductions or increases.
+    Reduce-only dust exits are not subject to opening minimum notional.
+    """
 
     current: dict[tuple[str, PositionSide], Decimal] = {}
     for (symbol, side), quantity in current_quantities.items():
@@ -340,6 +346,18 @@ def plan_basket_rebalance(
                 )
             )
         elif difference > 0:
+            rule = rules.get(symbol)
+            if rule is None or rule.symbol != symbol:
+                raise BasketPreflightError(f"{symbol}:INCREASE_RULES_UNAVAILABLE")
+            price = target.prices.get(symbol)
+            if price is None or not price.is_finite() or price <= 0:
+                raise BasketPreflightError(f"{symbol}:INCREASE_PRICE_UNAVAILABLE")
+            try:
+                if rule.floor_quantity(difference) != difference:
+                    raise ValueError("increase is not aligned to quantity step")
+                rule.validate_notional(difference, price)
+            except ValueError as exc:
+                raise BasketPreflightError(f"{symbol}:INCREASE_NOT_TRADABLE") from exc
             increases.append(
                 BasketAdjustment(
                     role=BasketAdjustmentRole.INCREASE,
