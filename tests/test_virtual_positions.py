@@ -379,3 +379,38 @@ def test_reconciliation_mismatch_is_explicit_and_blocking_input(tmp_path) -> Non
     assert len(reasons) == 1
     assert "expected=1" in reasons[0]
     assert "actual=1.1" in reasons[0]
+
+
+def test_fractional_settlements_survive_restarts_without_float_rounding(tmp_path):
+    path = tmp_path / "decimal-positions.sqlite3"
+    store = VirtualPositionStore(path)
+    store.initialize()
+    _open(
+        store,
+        event="entry",
+        strategy="sample",
+        run="sample-run",
+        side=PositionSide.LONG,
+        quantity="1",
+        price="50",
+    )
+    exact = store.settlement("sample", "sample-run").net_amount
+    for index, amount in enumerate(
+        (Decimal("-.03703703703703703703703704"), Decimal(".00000013"))
+    ):
+        kwargs = dict(
+            event_id=f"allocation-{index}",
+            strategy_id="sample",
+            run_id="sample-run",
+            symbol="BTCUSDT",
+            position_side=PositionSide.LONG,
+            amount=amount,
+            occurred_at=NOW,
+        )
+        store.apply_funding_allocation(**kwargs)
+        exact += amount
+        store = VirtualPositionStore(path)
+        assert store.settlement("sample", "sample-run").net_amount == exact
+        store.apply_funding_allocation(**kwargs)
+        assert store.settlement("sample", "sample-run").net_amount == exact
+        assert Decimal(str(float(exact))) != exact

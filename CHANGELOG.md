@@ -9,6 +9,11 @@ Semantic Versioning after the first tagged release.
 
 ### Fixed
 
+- Compare live monetary approvals without float rounding; reject non-finite or
+  non-positive money before external effects. Preserve valid legacy numeric callers.
+- Guard fractional settlement persistence and idempotent restart replay with synthetic
+  tests, and document exact downstream capital continuity in both languages.
+
 - Bounded, identity-checked read-only confirmation of incomplete FILLED acknowledgements.
 - Added opt-in exact post-fill convergence with stable refresh scope, durable request
   budget admission and restart-safe settlement holds, with synthetic regression tests.

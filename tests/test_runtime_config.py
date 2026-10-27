@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 import pytest
 
@@ -145,3 +146,73 @@ def test_configuration_errors_do_not_include_secret_values():
         config.require_account_mutation("place order")
 
     assert "private-key-value" not in str(captured.value)
+
+
+@pytest.mark.parametrize("field", ["margin", "notional"])
+def test_decimal_request_cannot_round_down_through_approval_limit(field):
+    config = make_live_config(make_approval(max_margin=100, max_notional=100))
+    amount = Decimal("100.0000000000000001")
+    assert float(amount) == 100  # The previous float comparison lost this excess.
+    with pytest.raises(ExternalEffectBlocked, match="exceeds"):
+        config.require_account_mutation("synthetic order", **{field: amount})
+
+
+@pytest.mark.parametrize("field", ["margin", "notional"])
+def test_decimal_limit_is_not_rounded_to_a_float(field):
+    limit = Decimal("100.0000000000000001")
+    config = make_live_config(make_approval(**{"max_" + field: limit}))
+    config.require_account_mutation("synthetic order", **{field: limit})
+    with pytest.raises(ExternalEffectBlocked, match="exceeds"):
+        config.require_account_mutation(
+            "synthetic order", **{field: Decimal("100.0000000000000002")}
+        )
+
+
+@pytest.mark.parametrize("field", ["margin", "notional"])
+@pytest.mark.parametrize(
+    "value",
+    [
+        float("nan"),
+        float("inf"),
+        float("-inf"),
+        Decimal("NaN"),
+        Decimal("sNaN"),
+        Decimal("Infinity"),
+        -1,
+        0,
+        True,
+        "invalid",
+    ],
+)
+def test_invalid_money_blocks_before_any_effect(field, value):
+    config = make_live_config()
+    effects = []
+    with pytest.raises(ExternalEffectBlocked, match="finite and positive"):
+        config.require_account_mutation("synthetic order", **{field: value})
+        effects.append("would submit")
+    assert not effects
+
+
+@pytest.mark.parametrize("field", ["max_margin", "max_notional"])
+@pytest.mark.parametrize(
+    "value",
+    [
+        float("nan"),
+        float("inf"),
+        Decimal("sNaN"),
+        Decimal("Infinity"),
+        -1,
+        0,
+        True,
+        "invalid",
+    ],
+)
+def test_invalid_approval_money_fails_at_construction(field, value):
+    with pytest.raises(RuntimeConfigurationError, match="finite and positive"):
+        make_approval(**{field: value})
+
+
+@pytest.mark.parametrize("value", [100, 100.25, Decimal("100.1234567890123456789")])
+def test_valid_decimal_integer_and_legacy_float_requests(value):
+    config = make_live_config()
+    config.require_account_mutation("synthetic order", margin=value, notional=value)

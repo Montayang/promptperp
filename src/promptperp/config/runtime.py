@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from decimal import Decimal
 from enum import Enum
 from typing import Mapping
 
@@ -21,6 +22,16 @@ class ExternalEffectBlocked(RuntimeError):
     """Raised before an unapproved network or account mutation is attempted."""
 
 
+def _positive_money(value: Decimal | float) -> Decimal:
+    """Do not round authoritative amounts through binary floating point."""
+    if isinstance(value, bool) or not isinstance(value, (Decimal, int, float)):
+        raise ValueError("money must be numeric")
+    amount = value if isinstance(value, Decimal) else Decimal(str(value))
+    if not amount.is_finite() or amount <= 0:
+        raise ValueError("money must be finite and positive")
+    return amount
+
+
 @dataclass(frozen=True)
 class LiveRunApproval:
     strategy_id: str
@@ -28,8 +39,8 @@ class LiveRunApproval:
     commit_sha: str
     approved_at: datetime
     expires_at: datetime
-    max_margin: float
-    max_notional: float
+    max_margin: Decimal | float
+    max_notional: Decimal | float
     max_leverage: int
     allowed_symbols: frozenset[str]
     allowed_sides: frozenset[str]
@@ -47,10 +58,15 @@ class LiveRunApproval:
             raise RuntimeConfigurationError(
                 "live approval expiry must follow approval time"
             )
-        if self.max_margin <= 0 or self.max_notional <= 0 or self.max_leverage <= 0:
+        try:
+            _positive_money(self.max_margin)
+            _positive_money(self.max_notional)
+        except ValueError:
             raise RuntimeConfigurationError(
-                "live approval risk limits must be positive"
-            )
+                "live approval monetary limits must be finite and positive"
+            ) from None
+        if self.max_leverage <= 0:
+            raise RuntimeConfigurationError("live approval leverage must be positive")
         normalized_symbols = frozenset(
             symbol.upper() for symbol in self.allowed_symbols
         )
@@ -72,8 +88,8 @@ class LiveRunApproval:
         commit_sha: str,
         symbol: str | None = None,
         side: str | None = None,
-        margin: float | None = None,
-        notional: float | None = None,
+        margin: Decimal | float | None = None,
+        notional: Decimal | float | None = None,
         leverage: int | None = None,
         now: datetime | None = None,
     ) -> None:
@@ -94,10 +110,20 @@ class LiveRunApproval:
             raise ExternalEffectBlocked("symbol is outside the live approval")
         if side is not None and side.upper() not in self.allowed_sides:
             raise ExternalEffectBlocked("side is outside the live approval")
-        if margin is not None and float(margin) > self.max_margin:
-            raise ExternalEffectBlocked("margin exceeds the live approval")
-        if notional is not None and float(notional) > self.max_notional:
-            raise ExternalEffectBlocked("notional exceeds the live approval")
+        for field, value, limit in (
+            ("margin", margin, self.max_margin),
+            ("notional", notional, self.max_notional),
+        ):
+            if value is None:
+                continue
+            try:
+                amount = _positive_money(value)
+            except ValueError:
+                raise ExternalEffectBlocked(
+                    f"{field} must be finite and positive"
+                ) from None
+            if amount > _positive_money(limit):
+                raise ExternalEffectBlocked(f"{field} exceeds the live approval")
         if leverage is not None and int(leverage) > self.max_leverage:
             raise ExternalEffectBlocked("leverage exceeds the live approval")
 
@@ -164,8 +190,8 @@ class RuntimeConfig:
         *,
         symbol: str | None = None,
         side: str | None = None,
-        margin: float | None = None,
-        notional: float | None = None,
+        margin: Decimal | float | None = None,
+        notional: Decimal | float | None = None,
         leverage: int | None = None,
     ) -> None:
         self._require_external_effect(action)
@@ -196,8 +222,8 @@ class RuntimeConfig:
         *,
         symbol: str | None = None,
         side: str | None = None,
-        margin: float | None = None,
-        notional: float | None = None,
+        margin: Decimal | float | None = None,
+        notional: Decimal | float | None = None,
         leverage: int | None = None,
     ) -> None:
         if self.mode is not RuntimeMode.LIVE:

@@ -95,3 +95,30 @@ be approved separately and cannot assume unverified quantities or send blind ord
 - Local success is not live acceptance. Run the offline quality gate, then review
   the account-specific integration and obtain separate execution approval. No live
   orders or email are sent by the regression suite.
+
+
+## Decimal money and restart continuity
+
+Live approval checks compare monetary limits and requested amounts as `Decimal`,
+without a binary-float conversion. A request even slightly above its approved limit
+must remain blocked. Supplied monetary amounts and limits must be finite and positive;
+NaN, infinity, booleans, zero and negative amounts are rejected before external effects.
+Existing positive integer and float callers remain supported. Prefer `Decimal` made
+from a decimal string for authoritative money: converting a value to float before
+calling the library has already lost precision and cannot be repaired here.
+
+For downstream strategy capital, keep the same exact decimal value in the pure signal
+state and persisted runtime state across successive settlements and restarts. Encode
+money as decimal strings (SQLite TEXT or JSON strings), load directly into `Decimal`,
+and apply each proven settlement once. Do not serialize the authoritative value as a
+float, reconstruct it from display rounding, or reset capital to the opening budget.
+The public virtual-position store already uses decimal strings; regression tests now
+cover fractional allocations across restart and idempotent replay. No private strategy
+runtime or capital-recovery procedure is included in this change.
+
+Migration: valid existing approvals need no schema migration. Integrations supplying
+invalid or non-positive monetary values will now fail closed; omit an inapplicable
+optional amount rather than use zero as a placeholder. A downstream runtime that has
+already discarded precision needs a separately reviewed recovery using durable
+settlements and account reconciliation. Never widen a reconciliation tolerance or
+remove an unresolved barrier to hide a state mismatch.
